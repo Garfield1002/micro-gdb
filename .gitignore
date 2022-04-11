@@ -1,6 +1,6 @@
 dump.bin
 test.py
 
-# /server/temp/*
+/server/temp/*
 
 __pycache__
