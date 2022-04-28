@@ -14,7 +14,7 @@ const useStyles = createUseStyles({
   box: ({ color }: { color: string }) => ({
     border: `2px solid ${color}`,
     padding: 0,
-    margin: "1em 0em 0em 0em",
+    margin: "0em 0em 1em 0em",
     borderRadius: "0.2em",
   }),
   title: ({ color }: { color: string }) => ({
@@ -153,16 +153,8 @@ function App() {
   //   "Welcome to the lock debugger.\nYou are connected to a lock you managed to procure. You have\n  enabled the JTAG headers. This is not the real door lock.\n  Use this mode to figure out what the lock is doing, and\n  then leave the debugger (upper left button) and enter\n  your input on the actual lock.\nIf you're not  sure what to do with this  interface, typing\n  'help' would be a good start.\nIf you just want to see things work, type 'continue'.\n\nConnecting to remote lock ...\nConnected. Have fun!\n\n\n> run\n   Unknown Command.\n> step\n> step\n> step\n> step\n\n> step\n> step\n> step\n> step\n\n> step\n> step\n> step\n> step\n";
   return (
     <Container className="App">
-      <Row>
-        <Col>
-          <Box name="Disassembly" color={blue} tooltip="">
-            <Disass disass={disass} pc={pc} />
-          </Box>
-          <Box name="Live Memory Dump" color={yellow} loading={memLoading}>
-            <Memory mem={memory} sp={sp} />
-          </Box>
-        </Col>
-        <Col>
+      <div className="myContainer">
+        <div className="col2">
           <Box
             name="Register State"
             color={yellow}
@@ -172,8 +164,8 @@ function App() {
           </Box>
 
           {/* <Box name="Current Instruction" color={yellow} tooltip="">
-            <p>pc 4400</p>
-          </Box> */}
+      <p>pc 4400</p>
+    </Box> */}
 
           <Box name="GDB Console" color={blue} tooltip="">
             <Terminal content={gdbHistory} on_input={onGdbInput} />
@@ -185,8 +177,16 @@ function App() {
               default_height="auto"
             />
           </Box>
-        </Col>
-      </Row>
+        </div>
+        <div className="col1">
+          <Box name="Disassembly" color={blue} tooltip="">
+            <Disass disass={disass} pc={pc} />
+          </Box>
+          <Box name="Live Memory Dump" color={yellow} loading={memLoading}>
+            <Memory mem={memory} sp={sp} />
+          </Box>
+        </div>
+      </div>
     </Container>
   );
 }
