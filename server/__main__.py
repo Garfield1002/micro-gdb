@@ -35,18 +35,21 @@ if __name__ == "__main__":
     if not os.path.exists(binary_path):
         print("Error")
 
-    cwd = os.getcwd()
-    os.system(f"rm -rf {cwd}/server/temp/*")
-    os.system(f"cp {binary_path} {cwd}/server/temp/")
+    if not os.path.exists("/tmp/microgdb"):
+        os.mkdir("/tmp/microgdb")
+    else:
+        os.system(f"rm -rf /tmp/microgdb/*")
+
+    os.system(f"cp {binary_path} /tmp/microgdb/")
 
     # get the path of the copied file
-    binary_path = os.path.join(f"{cwd}/server/temp/", os.path.basename(binary_path))
+    binary_path = os.path.join(f"/tmp/microgdb/", os.path.basename(binary_path))
 
     # if the file is c and not yet a binary compiles it into a 32bit binary
     if binary_path.endswith(".c"):
-        os.system(f"gcc {binary_path} -o {cwd}/server/temp/binary -m32")
+        os.system(f"gcc {binary_path} -o /tmp/microgdb/binary -m32")
     else:
-        os.system(f"mv {binary_path} {cwd}/server/temp/binary")
+        os.system(f"mv {binary_path} /tmp/microgdb/binary")
 
     run()
 
