@@ -44,7 +44,7 @@ class GDBHandler(metaclass=Singleton):
         Disassembles the current instruction
         """
         if not hasattr(self, "disassembly"):
-            os.system("objdump -d ./server/temp/binary > disass.txt")
+            os.system("objdump -d /tmp/microgdb/binary > disass.txt")
             with open("disass.txt", "r") as f:
                 self.disassembly = f.read()
                 self.disassembly = self.disassembly.split("\n")
@@ -148,5 +148,5 @@ class GDBHandler(metaclass=Singleton):
         self.memory = []
 
         # starts the code
-        self.run_command("file ./server/temp/binary")
+        self.run_command("file /tmp/microgdb/binary")
         self.run_command("starti")
