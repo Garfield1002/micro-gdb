@@ -22,62 +22,33 @@ class GDBHandler(metaclass=Singleton):
 
         if self.sp is None:
             # If there are no registers then there must not be any memory
-            self.sp = 4294955232
+            return
 
         self.memory.clear()
 
-        # The bounds of the memory dump
-        start, length = self.sp - 128, 256
+        # The bounds of the memory dump (aligned to 5 bytes)
+        start = ((self.sp - 384) >> 5) << 5
 
-        # TODO align memory
-
-        cwd = os.getcwd()
-
-        response = self.gdbmi.write(f"-data-read-memory-bytes {start} {length}")
-
-        # self.gdbmi.write(f"dump binary memory {cwd}/server/temp/dump.bin {start} {end}")
-        # os.popen(f'xxd -o {start} {cwd}/server/temp/dump.bin')
-        # responses = self.gdbmi.write(
-        #     f'eval "shell xxd -o %ld {cwd}/server/temp/dump.bin", {start}'
-        # )
+        response = self.gdbmi.write(f"-data-read-memory {start} z 2 32 8 .")
 
         payload = response[0]
 
         if payload["message"] != "done":
             return
 
-        mem = payload["payload"]["memory"][0]["contents"]
-
-        # If x is a printable ascii character, then return the character otherwise return a dot
-        printableChr = (
-            lambda x: chr(int(x, 16)) if int(x, 16) in range(32, 127) else "."
-        )
-
-        for i in range(0, len(mem), 32):
-            self.memory.append(
-                {
-                    "addr": start + i // 2,
-                    "bytes": ["".join(mem[n : n + 4]) for n in range(i, i + 32, 4)],
-                    "ascii": "".join(
-                        printableChr("".join(mem[n : n + 2]))
-                        for n in range(i, i + 32, 2)
-                    ),
-                }
-            )
+        self.memory = payload["payload"]["memory"]
         return
 
-        for response in responses:
-            if response["type"] == "output":
-                # {'type': 'output', 'message': None, 'payload': 'ffffd018: 0100 0000 0000 0000 42e5 ffff ff7f 0000  ........B.......', 'stream': 'stdout'}
-                payload: str = response["payload"]
-                payloads = payload.split(" ")
-                self.memory.append(
-                    {
-                        "addr": int(payloads[0][:-1], 16),
-                        "bytes": payloads[1:9],
-                        "ascii": payload[-16:],
-                    }
-                )
+    def disass(self):
+        """
+        Disassembles the current instruction
+        """
+        if not hasattr(self, "disassembly"):
+            os.system("objdump -d ./server/temp/binary > disass.txt")
+            with open("disass.txt", "r") as f:
+                self.disassembly = f.read()
+                self.disassembly = self.disassembly.split("\n")
+            os.remove("disass.txt")
 
     def custom_command(self, cmd: str):
         """
@@ -102,11 +73,11 @@ class GDBHandler(metaclass=Singleton):
                 reg_name = payload[0]
                 reg_val = payload[1]
 
-                # if self._is_ip(reg_name):
-                #     self.ip = int(reg_val, 16)
+                if self._is_ip(reg_name):
+                    self.ip = int(reg_val, 16)
 
-                # if self._is_sp(reg_name):
-                #     self.sp = int(reg_val, 16)
+                if self._is_sp(reg_name):
+                    self.sp = int(reg_val, 16)
 
                 self.registers.append(
                     {
@@ -132,7 +103,7 @@ class GDBHandler(metaclass=Singleton):
                     .replace("\\r", "\r")
                 )
                 if e["type"] == "log":
-                    pass
+                    self.gdb_out += payload
                 elif e["type"] == "output":
                     self.io_out += payload
                 else:
@@ -144,7 +115,6 @@ class GDBHandler(metaclass=Singleton):
         """
         self.add_response_to_history(response)
         self.update_registers()
-        self.update_memory()
 
     def run_command(self, cmd: str):
         """

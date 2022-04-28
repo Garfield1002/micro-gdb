@@ -21,12 +21,37 @@ def add_cors(response):
     return response
 
 
+@app.route("/update_mem", methods=["GET", "OPTIONS"])
+def update_mem():
+    handler = GDBHandler()
+
+    if request.method == "OPTIONS":
+        return add_cors(Response())
+
+    handler.update_memory()
+
+    response = jsonify({"memory": handler.memory})
+    return add_cors(response)
+
+
+@app.route("/disass", methods=["GET", "OPTIONS"])
+def disass():
+    handler = GDBHandler()
+
+    if request.method == "OPTIONS":
+        return add_cors(Response())
+
+    handler.disass()
+
+    response = jsonify({"disass": handler.disassembly})
+    return add_cors(response)
+
+
 @app.route("/update", methods=["GET", "POST", "OPTIONS"])
 def update():
     handler = GDBHandler()
 
     if request.method == "POST":
-        # print(request.json)
         gdb_input = request.json["gdb_input"]
         handler.run_command(gdb_input)
     elif request.method == "OPTIONS":
@@ -37,7 +62,6 @@ def update():
             "gdb_out": handler.gdb_out,
             "registers": handler.registers,
             "io_out": handler.io_out,
-            "memory": handler.memory,
             "ip": handler.ip,
             "sp": handler.sp,
         }

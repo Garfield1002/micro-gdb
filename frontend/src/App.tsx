@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 
 import { createUseStyles } from "react-jss";
-import { Container, Row, Col } from "react-bootstrap";
+import { Container, Row, Col, Spinner } from "react-bootstrap";
 import { blue, register, yellow } from "./utils";
 import Registers from "./Components/Registers";
 import Terminal from "./Components/Terminal";
 import Memory from "./Components/Memory";
 import { memory } from "./utils/types";
+import Disass from "./Components/Disass";
 
 const useStyles = createUseStyles({
   box: ({ color }: { color: string }) => ({
@@ -17,7 +18,10 @@ const useStyles = createUseStyles({
     borderRadius: "0.2em",
   }),
   title: ({ color }: { color: string }) => ({
-    display: "block",
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+
     backgroundColor: color,
     padding: "5px",
     textAlign: "left",
@@ -40,39 +44,86 @@ const Box = (props: {
   color: string;
   tooltip: string;
   children: React.ReactNode;
+  loading: boolean;
 }) => {
   const classes = useStyles({ color: props.color });
   return (
     <Row className={classes.box}>
-      <h1
-        className={classes.title}
-        data-toggle="tooltip"
-        data-placement="top"
-        title={props.tooltip}
-      >
-        {props.name}
-      </h1>
+      <div className={classes.title}>
+        <>
+          <span
+            style={{
+              flex: 1,
+              textAlign: "left",
+            }}
+            data-toggle="tooltip"
+            data-placement="top"
+            title={props.tooltip}
+          >
+            {props.name}
+          </span>
+        </>
+        <Spinner
+          style={{
+            display: props.loading ? "flex" : "none",
+          }}
+          animation="border"
+          role="status"
+          size="sm"
+        />
+      </div>
       <div className={classes.content}>{props.children}</div>
     </Row>
   );
+};
+
+Box.defaultProps = {
+  color: blue,
+  tooltip: "",
+  loading: false,
 };
 
 function App() {
   const [ioHistory, setIOHistory] = useState("");
   const [gdbHistory, setGdbHistory] = useState("");
   const [sp, setSP] = useState(0);
+  const [pc, setPC] = useState(0);
   const [memory, setMemory] = useState<memory[]>([]);
+  const [memLoading, setMemLoading] = useState(false);
   const [registers, setRegisters] = useState<register[]>([]);
+  const [disass, setDisass] = useState<string[]>([]);
+
+  const updateMemory = () => {
+    setMemLoading(true);
+    fetch("http://127.0.0.1:5000/update_mem")
+      .then((res) => res.json())
+      .then((res) => {
+        setMemory(res.memory);
+        setMemLoading(false);
+      });
+  };
+
+  const updateDisass = () => {
+    fetch("http://127.0.0.1:5000/disass")
+      .then((res) => res.json())
+      .then((res) => {
+        setDisass(res.disass);
+      });
+  };
 
   useEffect(() => {
     fetch("http://127.0.0.1:5000/update")
-      .then((res) => res.json())
+      .then((res) => {
+        updateMemory();
+        updateDisass();
+        return res.json();
+      })
       .then((res) => {
         setGdbHistory((g) => g + res.gdb_out);
         setRegisters(res.registers);
         setIOHistory((i) => i + res.io_out);
         setSP(res.sp);
-        setMemory(res.memory);
+        setPC(res.pc);
       });
   }, []);
 
@@ -86,13 +137,15 @@ function App() {
       },
       body: JSON.stringify({ gdb_input: input }),
     })
-      .then((res) => res.json())
+      .then((res) => {
+        updateMemory();
+        return res.json();
+      })
       .then((res) => {
         setGdbHistory((g) => g + res.gdb_out);
         setRegisters(res.registers);
         setIOHistory((i) => i + res.io_out);
         setSP(res.sp);
-        setMemory(res.memory);
       });
   };
 
@@ -103,9 +156,9 @@ function App() {
       <Row>
         <Col>
           <Box name="Disassembly" color={blue} tooltip="">
-            <p>pc 4400</p>
+            <Disass disass={disass} pc={pc} />
           </Box>
-          <Box name="Live Memory Dump" color={yellow} tooltip="">
+          <Box name="Live Memory Dump" color={yellow} loading={memLoading}>
             <Memory mem={memory} sp={sp} />
           </Box>
         </Col>

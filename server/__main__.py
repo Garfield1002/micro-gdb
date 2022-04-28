@@ -44,7 +44,7 @@ if __name__ == "__main__":
 
     # if the file is c and not yet a binary compiles it into a 32bit binary
     if binary_path.endswith(".c"):
-        os.system(f"gcc {binary_path} -o {cwd}/server/temp/binary -g -m32")
+        os.system(f"gcc {binary_path} -o {cwd}/server/temp/binary -m32")
     else:
         os.system(f"mv {binary_path} {cwd}/server/temp/binary")
 

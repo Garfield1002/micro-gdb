@@ -1,5 +1,5 @@
 import { createUseStyles } from "react-jss";
-import { Container, Row, Col } from "react-bootstrap";
+import { Row, Col, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { register } from "../utils";
 
 const useStyles = createUseStyles({
@@ -38,14 +38,14 @@ const Registers = (props: { registers: register[] }) => {
                     </small>
                   </td>
                   <td className={classes.regVal}>
-                    <small
-                      className={classes.mono}
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      title={reg.mem}
+                    <OverlayTrigger
+                      placement="bottom"
+                      overlay={
+                        <Tooltip id={`tooltip-bottom`}>{reg.mem}</Tooltip>
+                      }
                     >
-                      {reg.val}
-                    </small>
+                      <small className={classes.mono}>{reg.val}</small>
+                    </OverlayTrigger>
                   </td>
                 </tr>
               </tbody>

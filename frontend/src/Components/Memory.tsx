@@ -1,5 +1,5 @@
 import { createUseStyles } from "react-jss";
-import { memory } from "../utils/types";
+import { blue, memory } from "../utils";
 
 const useStyles = createUseStyles({
   container: {
@@ -17,14 +17,29 @@ const useStyles = createUseStyles({
     color: "#fff",
   },
   addr: {
-    marginRight: "3ch",
+    marginRight: "1.5ch",
+    marginLeft: "0.5ch",
   },
   byte: {
-    marginRight: "1ch",
+    marginRight: "0.5ch",
   },
   ascii: {
     fontVariantLigatures: "none",
-    marginLeft: "2ch",
+    marginLeft: "1.5ch",
+    marginRight: "0.5ch",
+  },
+  line: {
+    padding: {
+      top: "4px",
+      bottom: "4px",
+    },
+    display: "flex",
+    width: "100%",
+    justifyContent: "space-between",
+
+    "&:hover": {
+      backgroundColor: blue,
+    },
   },
 });
 
@@ -36,42 +51,50 @@ const Memory = (props: { mem: memory[]; sp: number }) => {
   return (
     <code className={classes.code}>
       <div className={classes.container}>
-        {props.mem.map(({ addr, bytes, ascii }, i) => (
-          <div key={i}>
-            <span className={classes.addr}>{`0x${addr.toString(16)}:`}</span>
-            {bytes.map((byte, j) => (
-              <span key={j} className={classes.byte}>
-                <span
-                  style={
-                    addr + 2 * j === props.sp
-                      ? {
-                          border: "1px",
-                          borderColor: "red",
-                          borderStyle: "dashed",
+        {props.mem.map(({ addr, data, ascii }, i) => {
+          let addrNumber: number = parseInt(addr, 16);
+          return (
+            <div key={i} className={classes.line}>
+              <span className={classes.addr}>{`${addr}:`}</span>
+              <span>
+                {data.map((byte0x, j) => {
+                  let byte = byte0x.slice(2);
+                  return (
+                    <span key={j} className={classes.byte}>
+                      <span
+                        style={
+                          addrNumber + 2 * j === props.sp
+                            ? {
+                                border: "1px",
+                                borderColor: "red",
+                                borderStyle: "dashed",
+                              }
+                            : {}
                         }
-                      : {}
-                  }
-                >
-                  {byte.slice(0, 2)}
-                </span>
-                <span
-                  style={
-                    addr + 2 * j + 1 === props.sp
-                      ? {
-                          border: "1px",
-                          borderColor: "red",
-                          borderStyle: "dashed",
+                      >
+                        {byte.slice(0, 2)}
+                      </span>
+                      <span
+                        style={
+                          addrNumber + 2 * j + 1 === props.sp
+                            ? {
+                                border: "1px",
+                                borderColor: "red",
+                                borderStyle: "dashed",
+                              }
+                            : {}
                         }
-                      : {}
-                  }
-                >
-                  {byte.slice(2)}
-                </span>
+                      >
+                        {byte.slice(2)}
+                      </span>
+                    </span>
+                  );
+                })}
               </span>
-            ))}
-            <span className={classes.ascii}>{ascii}</span>
-          </div>
-        ))}
+              <span className={classes.ascii}>{ascii}</span>
+            </div>
+          );
+        })}
       </div>
     </code>
   );

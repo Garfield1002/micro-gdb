@@ -5,7 +5,7 @@ export interface register {
 }
 
 export interface memory {
-  addr: number;
+  addr: string;
   ascii: string;
-  bytes: string[];
+  data: string[];
 }
