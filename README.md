@@ -3,7 +3,7 @@
 > ⚠ μ-gdg is still in a development phase and still has many bugs as well as vulnerabilities.
 Feel free to leave some feedback or contribute to this project.
 
-Micro gdb is a minimalist gdb frontent inspired by microcoruption's interface.
+Micro gdb is a minimalist gdb frontent inspired by microcorruption's interface.
 
 ![Screenshot MicroGDB](https://user-images.githubusercontent.com/53104608/165972546-df7c1e62-9129-4df5-855e-8942ad6ca560.png)
 
@@ -14,6 +14,8 @@ Micro gdb is built using a flask server with a React applicaton.
 The flask server relies heavily on [pygdbmi](https://github.com/cs01/pygdbmi).
 
 ## ⚙ Usage
+
+> ⚠ Micro gdb currently only supports Linux. For Window's users you can run it in WSL and access the interface through a browser in Windows.
 
 Install requirements with
 
