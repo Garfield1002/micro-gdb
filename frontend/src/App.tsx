@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 
 import { createUseStyles } from "react-jss";
-import { Container, Row, Col, Spinner } from "react-bootstrap";
+import { Container, Row, Spinner } from "react-bootstrap";
 import { blue, register, yellow } from "./utils";
 import Registers from "./Components/Registers";
 import Terminal from "./Components/Terminal";
@@ -92,6 +92,8 @@ function App() {
   const [memLoading, setMemLoading] = useState(false);
   const [registers, setRegisters] = useState<register[]>([]);
   const [disass, setDisass] = useState<string[]>([]);
+  const [entrypoint, setEntrypoint] = useState<number>(0);
+  const [prompt, setPrompt] = useState("(gdb) ");
 
   const updateMemory = () => {
     setMemLoading(true);
@@ -108,6 +110,7 @@ function App() {
       .then((res) => res.json())
       .then((res) => {
         setDisass(res.disass);
+        setEntrypoint(res.entrypoint);
       });
   };
 
@@ -146,6 +149,8 @@ function App() {
         setRegisters(res.registers);
         setIOHistory((i) => i + res.io_out);
         setSP(res.sp);
+        setPC(res.ip);
+        setPrompt(res.prompt);
       });
   };
 
@@ -168,19 +173,24 @@ function App() {
     </Box> */}
 
           <Box name="GDB Console" color={blue} tooltip="">
-            <Terminal content={gdbHistory} on_input={onGdbInput} />
+            <Terminal
+              content={gdbHistory}
+              on_input={onGdbInput}
+              prompt={prompt}
+            />
           </Box>
           <Box name="I/O Console" color={blue} tooltip="">
             <Terminal
               content={ioHistory}
               input_disabled
               default_height="auto"
+              prompt={prompt}
             />
           </Box>
         </div>
         <div className="col1">
           <Box name="Disassembly" color={blue} tooltip="">
-            <Disass disass={disass} pc={pc} />
+            <Disass disass={disass} pc={pc} entrypoint={entrypoint} />
           </Box>
           <Box name="Live Memory Dump" color={yellow} loading={memLoading}>
             <Memory mem={memory} sp={sp} />

@@ -1,7 +1,10 @@
-from pygdbmi.gdbcontroller import GdbController
+from time import sleep
+from typing import Optional
+from pygdbmi.IoManager import IoManager
 import re
 import os
 from Singleton import Singleton
+from PTYHandler import PTYHandler
 
 
 class GDBHandler(metaclass=Singleton):
@@ -29,9 +32,11 @@ class GDBHandler(metaclass=Singleton):
         # The bounds of the memory dump (aligned to 5 bytes)
         start = ((self.sp - 384) >> 5) << 5
 
+        # clears stdout
+        self.gdbmi.get_gdb_response(0, False)
         response = self.gdbmi.write(f"-data-read-memory {start} z 2 32 8 .")
 
-        payload = response[0]
+        payload = response[1]
 
         if payload["message"] != "done":
             return
@@ -44,11 +49,11 @@ class GDBHandler(metaclass=Singleton):
         Disassembles the current instruction
         """
         if not hasattr(self, "disassembly"):
-            os.system("objdump -d /tmp/microgdb/binary > disass.txt")
-            with open("disass.txt", "r") as f:
+            os.system(f"objdump -d --adjust-vma {hex(self.entrypoint)} /tmp/microgdb/binary > /tmp/microgdb/disass.txt")
+            with open("/tmp/microgdb/disass.txt", "r") as f:
                 self.disassembly = f.read()
                 self.disassembly = self.disassembly.split("\n")
-            os.remove("disass.txt")
+            os.remove("/tmp/microgdb/disass.txt")
 
     def custom_command(self, cmd: str):
         """
@@ -60,11 +65,56 @@ class GDBHandler(metaclass=Singleton):
             return True
         return False
 
+    def set_breakpoint(self, address: int) -> int:
+        """
+        Sets a breakpoint at the given address
+        """
+        # clears stdout
+        self.gdbmi.get_gdb_response(0, False)
+        response = self.gdbmi.write(f"-break-insert *{hex(address)}\n")
+        return int(response[1]["payload"]["bkpt"]["number"])
+
+
+    def remove_breakpoint(self, number: int):
+        """
+        Removes a breakpoint at the given address
+        """
+        self.gdbmi.write(f"-break-delete {number}\n")
+
+
+    def get_entrypoint(self):
+        """
+        Gets the entrypoint of the binary
+        """
+        # I have to pass by gdb because I can't get it to work in gdbmi
+
+        response = self.gdb.writeThenRead("info file\n")
+        self.gdb.writeThenRead("q\n")
+        print(response)
+        self.entrypoint = int(response.split("Entry point: ")[1].split("\n")[0], 16)
+
+        os.system("readelf -h /tmp/microgdb/binary > /tmp/microgdb/header.txt")
+
+        with open("/tmp/microgdb/header.txt", "r") as f:
+            response = f.read()
+        os.remove("/tmp/microgdb/header.txt")
+
+        print(response)
+        self.entrypoint -= int(response.split("Entry point address: ")[1].split("\n")[0], 16)
+
+        print(self.entrypoint)
+
+
     def update_registers(self):
         """
         Updates the values of all the registers
         """
-        response = self.gdbmi.write("i r")
+        # clears stdout
+        self.gdbmi.get_gdb_response(0, False)
+        response = self.gdbmi.write("i r\n")
+
+        print(response)
+
         self.registers.clear()
         for e in response:
             if e["type"] == "console":
@@ -87,50 +137,59 @@ class GDBHandler(metaclass=Singleton):
                     }
                 )
 
-    def add_response_to_history(self, response):
-        """
-        Adds the command and it's response to the history
-        """
-        for e in response:
-            if e["stream"] == "stdout" and type(e["payload"]) == str:
-                payload: str = e["payload"]
-                # TODO all double escaped chars
-                payload = (
-                    payload.replace("\\n", "\n")
-                    .replace('\\"', '"')
-                    .replace("\\'", "'")
-                    .replace("\\t", "\t")
-                    .replace("\\r", "\r")
-                )
-                if e["type"] == "log":
-                    self.gdb_out += payload
-                elif e["type"] == "output":
-                    self.io_out += payload
-                else:
-                    self.gdb_out += payload
-
-    def update(self, response):
+    def update(self):
         """
         Updates the state of the handler after a command
         """
-        self.add_response_to_history(response)
         self.update_registers()
 
-    def run_command(self, cmd: str):
+    def run_command(self, cmd: str, clear_history=True):
         """
-        Runs a command and updates the tracked information
+        Runs a command in the pty and updates the tracked information
         """
-        self.io_out = ""
-        self.gdb_out = ""
+        if clear_history:
+            self.io_out = ""
+            self.gdb_out = ""
         if not self.custom_command(cmd):
-            response = self.gdbmi.write(cmd)
-            self.update(response)
+            cmd = f"{cmd} \n"
+            s = self.gdb.writeThenRead(cmd)
+            ind2 = s.rfind('\n')
+            self.gdb_out = s[:ind2] + '\n' # removes the prompt and the previous input
+            self.prompt = s[ind2 + 1:]
+
+            self.update()
+
+    def startup(self, commands: list):
+        """
+        Starts the code
+        """
+        self.prompt = ""
+        for command in commands:
+            out = self.gdb.writeThenRead(command)
+            ind2 = out.rfind('\n')
+            self.gdb_out += self.prompt + command + "\n" + out[:ind2] + '\n'
+            self.prompt = out[ind2+1:]
+
+        # Gets the entrypoint of the binary
+        self.get_entrypoint()
+
+        self.update()
+
+    def run_gdb(self, command):
+        """
+        Runs gdb and updates the tracked information
+        """
+        s = self.gdb.writeThenRead(command + "\n")
+        ind2 = s.rfind('\n')
+        # removes the prompt
+        self.gdb_out = s[:ind2]
+        self.prompt = s[ind2 + 1:]
+
 
     def __init__(self):
-        self.gdbmi = GdbController()
+        self.gdb = PTYHandler("gdb")
 
-        # the last gdb command output
-        self.gdb_out = ""
+        self.gdb_out = self.gdb.readUntilPrompt()
 
         # the last program output
         self.io_out = ""
@@ -139,14 +198,31 @@ class GDBHandler(metaclass=Singleton):
         self.registers = []
 
         # the value of the stack pointer
-        self.sp = None
+        self.sp: Optional[int] = None
 
         # the value of the instruction pointer
-        self.ip = None
+        self.ip: Optional[int] = None
 
         # the value of the memory
         self.memory = []
 
+        # sets a tty to be used for the inferior
+        self.pty_inferior: PTYHandler = PTYHandler()
+
+        # sets a tty to be used for the gui
+        self.pty_gui: PTYHandler = PTYHandler()
+
+        self.gdb.writeThenRead(f"new-ui mi {self.pty_gui.name}\n")
+        self.gdb.writeThenRead(f"set inferior-tty {self.pty_inferior.name}\n")
+        # self.gdb.writeThenRead(f"set pagination off\n")
+        # self.gdb.writeThenRead(f"set width 32\n")
+        # self.gdb.writeThenRead(f"set height unlimited\n")
+
+        self.gdbmi = IoManager(
+            os.fdopen(self.pty_gui.master, "wb", buffering=0),
+            os.fdopen(self.pty_gui.master, "rb", buffering=0),
+            None,
+        )
+
         # starts the code
-        self.run_command("file /tmp/microgdb/binary")
-        self.run_command("starti")
+        self.startup(["file /tmp/microgdb/binary\n", "starti\n"])

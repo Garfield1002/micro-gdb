@@ -33,6 +33,30 @@ def update_mem():
     response = jsonify({"memory": handler.memory})
     return add_cors(response)
 
+@app.route("/set_breakpoint", methods=["POST", "OPTIONS"])
+def set_breakpoint():
+    handler = GDBHandler()
+
+    if request.method == "OPTIONS":
+        return add_cors(Response())
+
+    number = handler.set_breakpoint(request.json["address"])
+
+    response = jsonify({"success": True, "number": number})
+    return add_cors(response)
+
+@app.route("/remove_breakpoint", methods=["POST", "OPTIONS"])
+def remove_breakpoint():
+    handler = GDBHandler()
+
+    if request.method == "OPTIONS":
+        return add_cors(Response())
+
+    handler.remove_breakpoint(request.json["number"])
+
+    response = jsonify({"success": True})
+    return add_cors(response)
+
 
 @app.route("/disass", methods=["GET", "OPTIONS"])
 def disass():
@@ -43,7 +67,7 @@ def disass():
 
     handler.disass()
 
-    response = jsonify({"disass": handler.disassembly})
+    response = jsonify({"disass": handler.disassembly, "entrypoint": handler.entrypoint})
     return add_cors(response)
 
 
@@ -60,6 +84,7 @@ def update():
     response = jsonify(
         {
             "gdb_out": handler.gdb_out,
+            "prompt": handler.prompt,
             "registers": handler.registers,
             "io_out": handler.io_out,
             "ip": handler.ip,

@@ -5,18 +5,18 @@ import { black } from "../utils";
 const useStyles = createUseStyles({
   input: {
     paddingLeft: (props: {
-      prefix_txt: string;
+      prompt_txt: string;
       default_height: string;
       input_disabled: boolean;
-    }) => `${props.prefix_txt.length}ch`,
-    marginLeft: (props) => `-${props.prefix_txt.length}ch`,
+    }) => `${props.prompt_txt.length}ch`,
+    marginLeft: (props) => `-${props.prompt_txt.length}ch`,
     width: "100%",
     outline: "none",
     fontFamily: "Fira Code, Menlo, Monaco, Consolas, Courier New, monospace",
     fontSize: ".875em",
     color: black,
   },
-  prefix: {
+  prompt: {
     right: "-3px",
     position: "relative",
     opacity: "0.75",
@@ -51,8 +51,8 @@ const useStyles = createUseStyles({
 const Terminal = (props: {
   content: string;
   input_disabled: boolean;
-  prefix: string;
   default_height: string;
+  prompt: string;
   on_input: (input: string) => void;
 }) => {
   const [commandHistory, setCommandHistory] = useState([
@@ -65,7 +65,7 @@ const Terminal = (props: {
 
   const classes = useStyles({
     default_height: props.default_height,
-    prefix_txt: props.prefix,
+    prompt_txt: props.prompt,
     input_disabled: props.input_disabled,
     theme: "default",
   });
@@ -116,7 +116,7 @@ const Terminal = (props: {
         </div>
       </code>
       <div className={classes.input_container}>
-        <span className={classes.prefix}>{props.prefix}</span>
+        <span className={classes.prompt}>{props.prompt}</span>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -133,7 +133,6 @@ const Terminal = (props: {
 
 Terminal.defaultProps = {
   content: "",
-  prefix: "(gdb) ",
   input_disabled: false,
   default_height: "360px",
   on_input: (input: string) => {},

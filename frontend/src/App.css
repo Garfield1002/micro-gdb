@@ -25,6 +25,10 @@ body {
   padding-top: 50px;
 }
 
+pre {
+  overflow: visible;
+}
+
 .col1 {
   display: block;
   margin-right: 550px;
